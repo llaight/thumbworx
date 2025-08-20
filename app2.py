@@ -159,7 +159,12 @@ def plot_map():
         drivers = cur.fetchall()
         
         # get deliveries
-        cur.execute("SELECT delivery_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, assigned_driver_id, status FROM deliveries")
+        cur.execute("""
+            SELECT d.delivery_id, d.pickup_lat, d.pickup_lng, d.dropoff_lat, d.dropoff_lng, 
+                   d.assigned_driver_id, d.status, dr.name
+            FROM deliveries d
+            LEFT JOIN drivers dr ON d.assigned_driver_id = dr.driver_id
+        """)
         deliveries = cur.fetchall()
         
         # get geofences
@@ -183,6 +188,7 @@ def plot_map():
         # Deliveries
         for d in deliveries:
             status = d[6] if d[6] else 'unassigned'
+            driver_name = d[7] if d[7] else 'Unassigned'
             color = {
                 'assigned': 'green',
                 'in_transit': 'orange', 
@@ -193,15 +199,20 @@ def plot_map():
             # Pickup location
             folium.Marker(
                 [d[1], d[2]], 
-                popup=f"Pickup - Delivery {d[0]} ({status})", 
+                popup=f"Pickup - Delivery {d[0]} ({status})\nDriver: {driver_name}", 
                 icon=folium.Icon(color=color, icon='play')
             ).add_to(m)
+            
+            color_2 = {
+                'assigned': 'orange',
+                'delivered': 'purple'
+            }.get(status, 'orange')
             
             # Dropoff location
             folium.Marker(
                 [d[3], d[4]], 
-                popup=f"Dropoff - Delivery {d[0]}", 
-                icon=folium.Icon(color='orange', icon='stop')
+                popup=f"Dropoff - Delivery {d[0]} ({status})\nDriver: {driver_name}", 
+                icon=folium.Icon(color= color_2, icon='stop')
             ).add_to(m)
             
         # Geofences
@@ -269,7 +280,7 @@ def update_drivers():
                        SET current_lat = %s, current_lng = %s
                        WHERE driver_id = %s
                        """, (current_lat, current_lng, driver_id))
-        
+
         if cursor.rowcount == 0:
             conn.rollback()
             cursor.close()
@@ -313,7 +324,7 @@ def get_drivers():
 
 # deliveries request
 @app.route('/deliveries/request', methods=['POST'])
-def add_delivery_api():
+def add_deliveries_api():
     try:
         data = request.get_json()
         pickup_address = data.get('pickup_address')
@@ -349,6 +360,50 @@ def add_delivery_api():
         }), 201
     except Exception as e:
         return jsonify({"error": f"Failed to create delivery: {str(e)}"}), 500
+
+@app.route('/deliveries/update', methods=['POST'])
+def update_deliveries_api():
+    try:
+        data = request.get_json()
+        delivery_id= data.get('delivery_id')
+        new_status = data.get('status')
+
+        if not delivery_id or not new_status:
+            return jsonify({'error': "delivery_id and new_status are requires"}), 400
+        
+        conn= get_connection()
+        cursor= conn.cursor()
+
+        cursor.execute("""
+                    SELECT assigned_driver_id FROM deliveries WHERE delivery_id = %s
+                    """, (delivery_id,))
+        result_driver= cursor.fetchone()
+
+        if not result_driver:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "Delivery not found"}), 404
+        
+        assigned_driver_id= result_driver[0]
+
+        cursor.execute("""
+                       UPDATE deliveries SET status=%s, updated_at=NOW() WHERE delivery_id=%s
+                       """, (new_status, delivery_id))
+        
+        if new_status == 'delivered' and assigned_driver_id:
+            cursor.execute("""
+                           UPDATE drivers SET availability= TRUE WHERE driver_id=%s
+                           """, (assigned_driver_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        log_activity("update_delivery", f"Updated delivery {delivery_id} to status {new_status}")
+        return jsonify({"message": f"Delivery {delivery_id} updated to {new_status}"}), 200
+    
+    except Exception as e:
+        return jsonify({"error": f"Failed to update delivery: {str(e)}"}), 500
 
 @app.route('/deliveries/assign', methods=['GET'])
 def assign_deliveries_api():
@@ -397,17 +452,21 @@ def assign_deliveries_api():
             """, (total_eta, driver['driver_id'], delivery_id))
             
             # Set driver unavailable
-            cursor2.execute("UPDATE drivers SET available=False WHERE driver_id=%s", (driver['driver_id'],))
+            cursor2.execute("UPDATE drivers SET availability=False WHERE driver_id=%s", (driver['driver_id'],))
             
             conn.commit()
             cursor2.close()
 
             response.append({
-                "delivery_id": delivery_id,
-                "driver_id": driver['driver_id'],
-                "driver_name": driver['driver_name'],
-                "eta_minutes": total_eta,
-                "route_coordinates": full_route
+                 "delivery_id": delivery_id,
+                 "pickup_lat": pickup_lat,
+                 "pickup_lng": pickup_lng,
+                 "dropoff_lat": dropoff_lat,
+                 "dropoff_lng": dropoff_lng,
+                 "driver_id": driver['driver_id'],
+                 "driver_name": driver['driver_name'],
+                 "eta_minutes": total_eta,
+                 "route_coordinates": full_route
             })
 
         cursor.close()
@@ -415,6 +474,7 @@ def assign_deliveries_api():
         if request.headers.get('Accept') == 'application/json' or request.is_json:
             return jsonify({"assignments": response, "total_assigned": len(response)})
 
+        log_activity("assigned_delivery", f"Assigned deliveries: {response}")
         # Otherwise return HTML
         map_html = plot_map()
         html = f"""
@@ -424,12 +484,10 @@ def assign_deliveries_api():
             <title>Delivery Assignments</title>
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 20px; }}
-                .assignment {{ background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }}
             </style>
         </head>
         <body>
             <h2>Delivery Assignments ({len(response)} total)</h2>
-            {''.join([f'<div class="assignment"><strong>Delivery {a["delivery_id"]}</strong> - Driver: {a["driver_name"]} - ETA: {a["eta_minutes"]} min</div>' for a in response])}
             <h2>Live Map</h2>
             {map_html}
         </body>
@@ -439,6 +497,19 @@ def assign_deliveries_api():
 
     except Exception as e:
         return jsonify({"error": f"Failed to assign deliveries: {str(e)}"}), 500
+
+@app.route('/deliveries/logs', methods=['GET'])
+def get_deliveries_logs():
+    conn = get_connection()
+    cursor= conn.cursor()
+    cursor.execute("""
+                   SELECT * FROM deliveries""")
+    deliveries = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"deliveries": deliveries}), 200
+
 
 # Get specific route suggestion
 @app.route('/route/suggest', methods=['POST'])
