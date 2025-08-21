@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Logistics Recommendations Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e5e7eb;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 4px;
+        }
+        .map-container {
+            height: 500px;
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+    <!-- Main application container -->
+    <div class="flex-1 p-8 overflow-y-auto">
+        <!-- Dashboard Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 flex items-center mb-2">
+                <i class="fa-solid fa-truck text-gray-500 h-8 w-8 mr-5"></i>
+                Smart Logistics Recommendations
+            </h1>
+            <p class="text-gray-600">This feature provides efficient route suggestions and recommends optimal driver assignments based on real-time and historical data. Its goal is to improve delivery speed, reduce fuel consumption, and balance the workload among drivers.</p>
+        </header>
+
+        <!-- Main dashboard content -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Live map and metrics dashboard section -->
+            <div class="lg:col-span-2 grid grid-cols-1 gap-6">
+                <!-- Live map -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17.252a1 1 0 11-2 0 1 1 0 012 0zM12 17.252a1 1 0 11-2 0 1 1 0 012 0zM15 17.252a1 1 0 11-2 0 1 1 0 012 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12a1 1 0 11-2 0 1 1 0 012 0zM12 12a1 1 0 11-2 0 1 1 0 012 0zM15 12a1 1 0 11-2 0 1 1 0 012 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7a1 1 0 11-2 0 1 1 0 012 0zM12 7a1 1 0 11-2 0 1 1 0 012 0zM15 7a1 1 0 11-2 0 1 1 0 012 0z" />
+                            </svg>
+                            Live Fleet & Delivery Map
+                        </h2>
+                    </div>
+                    <div class="map-container w-full rounded-md overflow-hidden">
+                        <iframe id="map-iframe" src="http://localhost:5001/map" width="100%" height="100%" frameborder="0" allowtransparency></iframe>
+                    </div>
+                </div>
+
+                <!-- Metabase dashboard -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.5v17a1 1 0 01-1 1H4a1 1 0 01-1-1v-17a1 1 0 011-1h6a1 1 0 011 1zm4 0v17a1 1 0 01-1 1h-6a1 1 0 01-1-1v-17a1 1 0 011-1h6a1 1 0 011 1z" />
+                            </svg>
+                            Delivery Metrics Dashboard
+                        </h2>
+                    </div>
+                    <div class="aspect-w-16 aspect-h-9 w-full rounded-md overflow-hidden">
+                        <iframe src="http://localhost:3000/public/dashboard/15ed7140-cc8b-457e-8644-bd375d95173e" width="100%" height="600" frameborder="0" allowtransparency></iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Side panel for all data entry forms -->
+            <div class="grid grid-cols-1 gap-6">
+                <!-- Add new driver section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 flex items-center mb-4">
+                        <i class="fa-solid fa-user text-indigo-500 h-6 w-6 mr-2"></i>
+                        Add New Driver
+                    </h2>
+                    <form id="add-driver-form" class="space-y-4">
+                        <div>
+                            <label for="driver-name" class="block text-sm font-medium text-gray-700">Driver Name</label>
+                            <input type="text" id="driver-name" name="name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <div>
+                            <label for="driver-address" class="block text-sm font-medium text-gray-700">Current Address</label>
+                            <input type="text" id="driver-address" name="current_address" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Add Driver
+                        </button>
+                    </form>
+                    <div id="add-driver-status" class="mt-4 p-3 rounded-md hidden"></div>
+                </div>
+
+                <!-- Request new delivery section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 flex items-center mb-4">
+                        <i class="fa-solid fa-box-open text-green-500 h-6 w-6 mr-2"></i>
+                        Request New Delivery
+                    </h2>
+                    <form id="request-delivery-form" class="space-y-4">
+                        <div>
+                            <label for="pickup-address" class="block text-sm font-medium text-gray-700">Pickup Address</label>
+                            <input type="text" id="pickup-address" name="pickup_address" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <div>
+                            <label for="dropoff-address" class="block text-sm font-medium text-gray-700">Dropoff Address</label>
+                            <input type="text" id="dropoff-address" name="dropoff_address" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            Request Delivery
+                        </button>
+                    </form>
+                    <div id="request-delivery-status" class="mt-4 p-3 rounded-md hidden"></div>
+                </div>
+
+                <!-- Assign pending deliveries section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 flex items-center mb-4">
+                        <i class="fa-solid fa-truck-fast text-yellow-500 h-6 w-6 mr-2"></i>
+                        Assign Pending Deliveries
+                    </h2>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Click the button below to automatically assign available deliveries to the nearest drivers.
+                    </p>
+                    <button id="assign-delivery-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+                        Assign Deliveries
+                    </button>
+                    <div id="assign-delivery-status" class="mt-4 p-3 rounded-md hidden"></div>
+                </div>
+
+                <!-- Update delivery status section -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-gray-800 flex items-center mb-4">
+                        <i class="fa-solid fa-clipboard-check text-red-500 h-6 w-6 mr-2"></i>
+                        Update Delivery Status
+                    </h2>
+                    <form id="update-delivery-form" class="space-y-4">
+                        <div>
+                            <label for="delivery-id" class="block text-sm font-medium text-gray-700">Delivery ID</label>
+                            <input type="text" id="delivery-id" name="delivery_id" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                        </div>
+                        <div>
+                            <label for="delivery-status" class="block text-sm font-medium text-gray-700">New Status</label>
+                            <select id="delivery-status" name="status" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2">
+                                <option value="assigned">Assigned</option>
+                                <option value="in_transit">In Transit</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            Update Status
+                        </button>
+                    </form>
+                    <div id="update-delivery-status" class="mt-4 p-3 rounded-md hidden"></div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // Set the base URL for the backend API
+        const BACKEND_URL = 'http://localhost:5001';
+
+        // Generic function to handle API requests and update the UI status.
+        async function handleApiRequest(formId, endpoint, successMessage, statusMessageElementId, method = 'POST') {
+            const form = document.getElementById(formId);
+            const statusMessage = document.getElementById(statusMessageElementId);
+
+            if (form.tagName === 'BUTTON') {
+                form.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    await executeRequest(form, endpoint, successMessage, statusMessage);
+                });
+            } else {
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    await executeRequest(form, endpoint, successMessage, statusMessage);
+                });
+            }
+
+            async function executeRequest(target, endpoint, successMessage, statusMessage) {
+                let data = null;
+                if (target.tagName === 'FORM') {
+                    const formData = new FormData(target);
+                    data = Object.fromEntries(formData.entries());
+                }
+
+                statusMessage.textContent = 'Processing request...';
+                statusMessage.className = 'mt-4 p-3 rounded-md bg-yellow-100 text-yellow-700';
+                statusMessage.style.display = 'block';
+
+                try {
+                    const options = {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                    };
+
+                    if (data) {
+                        options.body = JSON.stringify(data);
+                    }
+
+                    const response = await fetch(`${BACKEND_URL}${endpoint}`, options);
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Something went wrong');
+                    }
+
+                    const result = await response.json();
+
+                    let finalMessage = successMessage;
+                    if (endpoint === '/deliveries/assign' && result.total_assigned > 0) {
+                        finalMessage = `${result.total_assigned} deliveries assigned successfully!`;
+                    } else if (endpoint === '/deliveries/assign' && result.total_assigned === 0) {
+                        finalMessage = 'No pending deliveries to assign at this time.';
+                    } else if (endpoint === '/deliveries/update') {
+                        finalMessage = `Delivery updated: ${result.message}`;
+                    }
+
+                    statusMessage.textContent = finalMessage;
+                    statusMessage.className = 'mt-4 p-3 rounded-md bg-green-100 text-green-700';
+                    statusMessage.style.display = 'block';
+
+                    if (target.tagName === 'FORM') {
+                        target.reset();
+                    }
+                    
+                    document.getElementById('map-iframe').src = `${BACKEND_URL}/map`;
+
+                } catch (error) {
+                    statusMessage.textContent = 'Error: ' + error.message;
+                    statusMessage.className = 'mt-4 p-3 rounded-md bg-red-100 text-red-700';
+                    statusMessage.style.display = 'block';
+                    console.error('API call failed:', error);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            handleApiRequest('add-driver-form', '/drivers/add', 'Driver added successfully!', 'add-driver-status');
+            handleApiRequest('request-delivery-form', '/deliveries/request', 'Delivery requested successfully!', 'request-delivery-status');
+            handleApiRequest('assign-delivery-button', '/deliveries/assign', 'Deliveries assigned successfully!', 'assign-delivery-status', 'GET');
+            handleApiRequest('update-delivery-form', '/deliveries/update', 'Status updated successfully!', 'update-delivery-status');
+        });
+    </script>
+</body>
+</html>
