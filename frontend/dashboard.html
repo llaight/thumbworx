@@ -241,7 +241,7 @@
                     
                     document.getElementById('map-iframe').src = `${BACKEND_URL}/map`;
 
-                    if (['/deliveries/request', '/deliveries/assign', '/deliveries/update'].includes(endpoint)) {
+                    if (['/deliveries/request', '/deliveries/assign', '/deliveries/update', '/drivers/add', '/drivers/update'].includes(endpoint)) {
                         const metabaseIframe = document.getElementById('metabase-iframe');
                         metabaseIframe.src = metabaseIframe.src;
                     }
@@ -254,6 +254,7 @@
                 }
             }
         }
+
 
 
         document.addEventListener('DOMContentLoaded', () => {

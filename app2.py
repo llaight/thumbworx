@@ -259,7 +259,7 @@ def add_driver():
         cursor.close()
         conn.close()
         
-        log_activity("add_driver", f"Added driver {name} at {current_lat}, {current_lng}")  
+        log_activity("add_driver", f"Added driver {name} at {data.get('current_address')} ({current_lat}, {current_lng})")  
         return jsonify({"message": "Driver added successfully", "driver": {"name": name, "lat": current_lat, "lng": current_lng}}), 201
     except Exception as e:
         return jsonify({"error": f"Failed to add driver: {str(e)}"}), 500
