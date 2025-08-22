@@ -12,7 +12,8 @@ import os
 from geopy.geocoders import OpenCage
 from haversine import haversine
 import folium
-
+import requests
+import json
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -415,7 +416,7 @@ def assign_deliveries_api():
             FROM deliveries
             WHERE assigned_driver_id IS NULL AND status='pending'
             """)
-
+    
         deliveries = cursor.fetchall()
         response = []
 
@@ -434,14 +435,41 @@ def assign_deliveries_api():
                 continue
 
             # ETA calculations
-            eta_to_pickup = float(get_eta_minutes(driver['driver_lat'], driver['driver_lng'], pickup_lat, pickup_lng, model))
-            eta_delivery = float(get_eta_minutes(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, model))
-            total_eta = eta_to_pickup + eta_delivery
+            osmr_url_to_pickup = f"http://router.project-osrm.org/route/v1/driving/{driver['driver_lng']},{driver['driver_lat']};{pickup_lng},{pickup_lat}?overview=full&geometries=geojson"
+            osmr_url_to_dropoff = f"http://router.project-osrm.org/route/v1/driving/{pickup_lng},{pickup_lat};{dropoff_lng},{dropoff_lat}?overview=full&geometries=geojson"
+            try:
+                resp = requests.get(osmr_url_to_pickup, timeout=5).json()
+                resp2 = requests.get(osmr_url_to_dropoff, timeout=5).json()
+                if resp.get("routes") and resp2.get("routes"):
+                    #eta
+                    eta_to_pickup = resp["routes"][0]["duration"] / 60
+                    eta_delivery = resp2["routes"][0]["duration"] / 60
+                    total_eta = eta_to_pickup + eta_delivery
+
+                    #route
+                    route_to_pickup = resp["routes"][0]["geometry"]["coordinates"]
+                    route_to_dropoff = resp2["routes"][0]["geometry"]["coordinates"]
+                    full_route = [f"{lat},{lng}" for lat, lng in route_to_pickup + route_to_dropoff[1:]]
+
+                    #distance
+                    distance_to_pickup = resp["routes"][0]["distance"] / 1000  # Convert to km
+                    distance_delivery = resp2["routes"][0]["distance"] / 1000  # Convert to km
+                    total_distance = distance_to_pickup + distance_delivery
+                else:
+                    log_activity("route_error", f"OSRM no route for delivery {delivery_id}")
+                    continue
+            except Exception as e:
+                log_activity("route_error", f"OSRM request failed for delivery {delivery_id}: {e}")
+                continue
+            # eta_to_pickup = float(get_eta_minutes(driver['driver_lat'], driver['driver_lng'], pickup_lat, pickup_lng, model))
+            # eta_delivery = float(get_eta_minutes(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, model))
+            # total_eta = eta_to_pickup + eta_delivery
 
             # Route
-            route_to_pickup, _ = suggest_route((driver['driver_lat'], driver['driver_lng']), (pickup_lat, pickup_lng))
-            route_to_dropoff, _ = suggest_route((pickup_lat, pickup_lng), (dropoff_lat, dropoff_lng))
-            full_route = [[float(lat), float(lng)] for lat, lng in route_to_pickup + route_to_dropoff[1:]]
+            # route_to_pickup, _ = suggest_route((driver['driver_lat'], driver['driver_lng']), (pickup_lat, pickup_lng))
+            # route_to_dropoff, _ = suggest_route((pickup_lat, pickup_lng), (dropoff_lat, dropoff_lng))
+            # full_route = [[float(lat), float(lng)] for lat, lng in route_to_pickup + route_to_dropoff[1:]]
+
 
             # Update delivery
             cursor2 = conn.cursor()
@@ -450,7 +478,13 @@ def assign_deliveries_api():
                 SET eta_minutes=%s, assigned_driver_id=%s, updated_at=NOW()
                 WHERE delivery_id=%s
             """, (total_eta, driver['driver_id'], delivery_id))
-            
+
+            #Update route
+            cursor2.execute("""
+                            INSERT INTO routes(delivery_id, waypoints, distance_km, duration_minutes)
+                            VALUES (%s, %s, %s, %s)
+                            """, (delivery_id, full_route, total_distance, total_eta))
+
             # Set driver unavailable
             cursor2.execute("UPDATE drivers SET availability=False WHERE driver_id=%s", (driver['driver_id'],))
             
@@ -503,7 +537,8 @@ def get_deliveries_logs():
     conn = get_connection()
     cursor= conn.cursor()
     cursor.execute("""
-                   SELECT * FROM deliveries""")
+                   SELECT * FROM deliveries
+                   ORDER BY delivery_id DESC""")
     deliveries = cursor.fetchall()
     cursor.close()
     conn.close()

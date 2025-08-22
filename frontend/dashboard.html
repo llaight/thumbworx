@@ -72,7 +72,7 @@
                         </h2>
                     </div>
                     <div class="aspect-w-16 aspect-h-9 w-full rounded-md overflow-hidden">
-                        <iframe src="http://localhost:3000/public/dashboard/15ed7140-cc8b-457e-8644-bd375d95173e" width="100%" height="600" frameborder="0" allowtransparency></iframe>
+                        <iframe id="metabase-iframe" src="http://localhost:3000/public/dashboard/338aadd9-d8c7-488d-95a7-d16f68268305" width="100%" height="600" frameborder="0" allowtransparency></iframe>
                     </div>
                 </div>
             </div>
@@ -241,6 +241,11 @@
                     
                     document.getElementById('map-iframe').src = `${BACKEND_URL}/map`;
 
+                    if (['/deliveries/request', '/deliveries/assign', '/deliveries/update'].includes(endpoint)) {
+                        const metabaseIframe = document.getElementById('metabase-iframe');
+                        metabaseIframe.src = metabaseIframe.src;
+                    }
+
                 } catch (error) {
                     statusMessage.textContent = 'Error: ' + error.message;
                     statusMessage.className = 'mt-4 p-3 rounded-md bg-red-100 text-red-700';
@@ -249,6 +254,7 @@
                 }
             }
         }
+
 
         document.addEventListener('DOMContentLoaded', () => {
             handleApiRequest('add-driver-form', '/drivers/add', 'Driver added successfully!', 'add-driver-status');
