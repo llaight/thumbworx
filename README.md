@@ -56,6 +56,6 @@ MIT License — Free to use, modify, and extend for learning or portfolio purpos
 GitHub: [github.com/llaight](https://github.com/llaight)
 
 **Catherine Joy Paliden**  
-GitHub: [github.com/catherinejoy](https://github.com/chickerinejoy))
+GitHub: [github.com/catherinejoy](https://github.com/chickerinejoy)
 
 Developed during internship at LAMINA Studios
